@@ -59,8 +59,8 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	    phys->isBroken = true; // flag for DFNFlowEngine
 	    
             // update body state with the number of broken bonds -> do we really need that?
-	    JCFpmState* st1=dynamic_cast<JCFpmState*>(b1->state.get());
-	    JCFpmState* st2=dynamic_cast<JCFpmState*>(b2->state.get());
+	    BPMState* st1=dynamic_cast<BPMState*>(b1->state.get());
+	    BPMState* st2=dynamic_cast<BPMState*>(b2->state.get());
             st1->nbBrokenBonds++;
 	    st2->nbBrokenBonds++;
 	    st1->damageIndex+=1.0/st1->nbInitBonds;
@@ -137,8 +137,8 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	    phys->isBroken = true; // flag for DFNFlowEngine
 	    
 	    // update body state with the number of broken bonds -> do we really need that?
-	    JCFpmState* st1=dynamic_cast<JCFpmState*>(b1->state.get());
-	    JCFpmState* st2=dynamic_cast<JCFpmState*>(b2->state.get());
+	    BPMState* st1=dynamic_cast<BPMState*>(b1->state.get());
+	    BPMState* st2=dynamic_cast<BPMState*>(b2->state.get());
 	    st1->nbBrokenBonds++;
 	    st2->nbBrokenBonds++;
 	    st1->damageIndex+=1.0/st1->nbInitBonds;
@@ -200,9 +200,9 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	
 }
 
-CREATE_LOGGER(Ip2_JCFpmMat_JCFpmMat_JCFpmPhys);
+CREATE_LOGGER(Ip2_BPMMat_BPMMat_BPMPhys);
 
-void Ip2_JCFpmMat_JCFpmMat_JCFpmPhys::go(const shared_ptr<Material>& b1, const shared_ptr<Material>& b2, const shared_ptr<Interaction>& interaction){
+void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_ptr<Material>& b2, const shared_ptr<Interaction>& interaction){
 
 	/* avoid updates of interaction if it already exists */
 	if( interaction->phys ) return; 
@@ -210,12 +210,12 @@ void Ip2_JCFpmMat_JCFpmMat_JCFpmPhys::go(const shared_ptr<Material>& b1, const s
 	ScGeom* geom=dynamic_cast<ScGeom*>(interaction->geom.get());
 	assert(geom);
 
-	const shared_ptr<JCFpmMat>& yade1 = YADE_PTR_CAST<JCFpmMat>(b1);
-	const shared_ptr<JCFpmMat>& yade2 = YADE_PTR_CAST<JCFpmMat>(b2);
-	JCFpmState* st1=dynamic_cast<JCFpmState*>(Body::byId(interaction->getId1(),scene)->state.get());
-	JCFpmState* st2=dynamic_cast<JCFpmState*>(Body::byId(interaction->getId2(),scene)->state.get());
+	const shared_ptr<BPMMat>& yade1 = YADE_PTR_CAST<BPMMat>(b1);
+	const shared_ptr<BPMMat>& yade2 = YADE_PTR_CAST<BPMMat>(b2);
+	BPMState* st1=dynamic_cast<BPMState*>(Body::byId(interaction->getId1(),scene)->state.get());
+	BPMState* st2=dynamic_cast<BPMState*>(Body::byId(interaction->getId2(),scene)->state.get());
 	
-	shared_ptr<JCFpmPhys> contactPhysics(new JCFpmPhys()); 
+	shared_ptr<BPMPhys> contactPhysics(new BPMPhys()); 
 	
 	/* From material properties */
 	Real E1 	= yade1->young;
@@ -236,7 +236,7 @@ void Ip2_JCFpmMat_JCFpmMat_JCFpmPhys::go(const shared_ptr<Material>& b1, const s
 	Real R2= geom->radius2;
 	contactPhysics->crossSection = Mathr::PI*pow(min(R1,R2),2);
 
-	/* Pass values to JCFpmPhys. In case of a "jointed" interaction, the following values will be replaced by other ones later (in few if(){} blocks)*/
+	/* Pass values to BPMPhys. In case of a "jointed" interaction, the following values will be replaced by other ones later (in few if(){} blocks)*/
 	
 	// elastic properties
 	contactPhysics->kn = 2.*E1*R1*E2*R2/(E1*R1+E2*R2);
@@ -324,4 +324,4 @@ void Ip2_JCFpmMat_JCFpmMat_JCFpmPhys::go(const shared_ptr<Material>& b1, const s
 	interaction->phys = contactPhysics;
 }
 
-JCFpmPhys::~JCFpmPhys(){}
+BPMPhys::~BPMPhys(){}
