@@ -26,11 +26,15 @@ class BPMMat: public FrictMat {
 		virtual shared_ptr<State> newAssocState() const { return shared_ptr<State>(new BPMState); }
 		virtual bool stateTypeOk(State* s) const { return (bool)dynamic_cast<BPMState*>(s); }
 		
-	YADE_CLASS_BASE_DOC_ATTRS_CTOR(BPMMat,FrictMat,"Possibly jointed, cohesive frictional material, for use with other JCFpm classes",
+	YADE_CLASS_BASE_DOC_ATTRS_CTOR(BPMMat,FrictMat,"Cohesive frictional material, for use with other BPM classes",
 		((int,type,0,,"If particles of two different types interact, it will be with friction only (no cohesion).[-]"))
-		((Real,tensileStrength,0.,,"Defines the maximum admissible normal force in traction in the matrix (:yref:`FnMax<JCFpmPhys.FnMax>` = tensileStrength * :yref:`crossSection<JCFpmPhys.crossSection>`). [Pa]"))
-		((Real,cohesion,0.,,"Defines the maximum admissible tangential force in shear, for Fn=0, in the matrix (:yref:`FsMax<JCFpmPhys.FsMax>` = cohesion * :yref:`crossSection<JCFpmPhys.crossSection>`). [Pa]"))
-                ((Real,residualFrictionAngle,-1.,,"Defines the residual friction angle (when contacts are not cohesive). residualFrictionAngle=frictionAngle if not specified. [degrees]"))
+		((Real,residualFrictionAngle,-1.,,"Defines the residual friction angle (when contacts are not cohesive). residualFrictionAngle=frictionAngle if not specified. [degrees]"))
+		((Real,normalCohesion,0.,,"Defines the maximum admissible normal stress in traction in the matrix. [Pa]"))
+		((Real,shearCohesion,0.,,"Defines the maximum admissible tangential stress, for Fn=0, in the matrix. [Pa]"))
+		((Real,beamNormalStiffness,0.,,"Defines the normal stiffness of the cohesive contact. [Pa]"))
+		((Real,beamShearStiffness,0.,,"Defines the normal stiffness of the cohesive contact. [Pa]"))
+		((Real,lambda,0.,,"Parameter defining the radius of the cohesive contact. [-]"))
+		((Real,beta,0.,,"Parameter to define the influence of the moments on the calculated maximum stress. [-]"))
 		,
 		createIndex();
 	);
@@ -43,14 +47,20 @@ class BPMPhys: public NormShearPhys {
 	public:
 		virtual ~BPMPhys();
 
-		YADE_CLASS_BASE_DOC_ATTRS_CTOR_PY(BPMPhys,NormShearPhys,"Representation of a single interaction of the JCFpm type, storage for relevant parameters",
+		YADE_CLASS_BASE_DOC_ATTRS_CTOR_PY(BPMPhys,NormShearPhys,"Representation of a single interaction of the BPM type, storage for relevant parameters",
+			((Real,beamNormalForce,0.,,"save the normal force for next step increment.[N]"))
+			((Real,beamShearForce,0.,,"save the shear force for next step increment.[N]"))
+			((Real,beamMomentTwist,0.,,"twist moment calculated for the beam.[Pa.m]"))
+			((Real,beamMomentBending,0.,,"twist moment calculated for the beam.[Pa.m]"))
 			((Real,initD,0.,,"equilibrium distance for interacting particles. Computed as the interparticular distance at first contact detection."))
 			((bool,isBroken,false,,"flag for broken interactions"))
-			((bool,isCohesive,false,,"If false, particles interact in a frictional way. If true, particles are bonded regarding the given :yref:`cohesion<JCFpmMat.cohesion>` and :yref:`tensile strength<JCFpmMat.tensileStrength>` (or their jointed variants)."))
+			((bool,isCohesive,false,,"If false, particles interact in a frictional way. If true, particles are bonded."))
 			((Real,tanFrictionAngle,0.,,"tangent of Coulomb friction angle for this interaction (auto. computed). [-]"))
-			((Real,crossSection,0.,,"crossSection=pi*Rmin^2. [m2]"))
-			((Real,FnMax,0.,,"positiv value computed from :yref:`tensile strength<JCFpmMat.tensileStrength>` (or joint variant) to define the maximum admissible normal force in traction: Fn >= -FnMax. [N]"))
-			((Real,FsMax,0.,,"computed from :yref:`cohesion<JCFpmMat.cohesion>` (or jointCohesion) to define the maximum admissible tangential force in shear, for Fn=0. [N]"))
+			((Real,beamRadius,0.,,"beamRadius=lambda*Rmin. [m]"))
+			((Real,beamArea,0.,,"beamArea=pi*beamRadius^2. [m^2]"))
+			((Real,beamMomInertia,0.,,"beamMomInertia=(1/4)*pi*R^4. [m^4]"))
+			((Real,beamPolarMomInertia,0.,,"beamPolarMomInertia=(1/2)*pi*R^4. [m]"))
+			((Real,previousDisplacement,0.,,"displacement between two particles from the previous step. [m]"))
 			((bool,breakOccurred,0,,"Flag used to trigger retriangulation as soon as a cohesive bond breaks in FlowEngine (for DFNFlow use only)"))
 			,
 			createIndex();
@@ -61,7 +71,7 @@ class BPMPhys: public NormShearPhys {
 };
 REGISTER_SERIALIZABLE(BPMPhys);
 
-/** 2d functor creating InteractionPhysics (Ip2) taking JCFpmMat and JCFpmMat of 2 bodies, returning type JCFpmPhys */
+/** 2d functor creating InteractionPhysics (Ip2) taking BPMMat and BPMMat of 2 bodies, returning type BPMPhys */
 class Ip2_BPMMat_BPMMat_BPMPhys: public IPhysFunctor{
 	public:
 		virtual void go(const shared_ptr<Material>& pp1, const shared_ptr<Material>& pp2, const shared_ptr<Interaction>& interaction);
@@ -75,13 +85,13 @@ class Ip2_BPMMat_BPMMat_BPMPhys: public IPhysFunctor{
 };
 REGISTER_SERIALIZABLE(Ip2_BPMMat_BPMMat_BPMPhys);
 
-/** 2d functor creating the interaction law (Law2) based on SphereContactGeometry (ScGeom) and JCFpmPhys of 2 bodies, returning type JointedCohesiveFrictionalPM */
+/** 2d functor creating the interaction law (Law2) based on SphereContactGeometry (ScGeom) and BPMPhys of 2 bodies, returning type BondedContactM */
 class Law2_ScGeom_BPMPhys_BondedContactM: public LawFunctor{
 	public:
 		virtual bool go(shared_ptr<IGeom>& _geom, shared_ptr<IPhys>& _phys, Interaction* I);
 		FUNCTOR2D(ScGeom,BPMPhys);
 
-		YADE_CLASS_BASE_DOC_ATTRS(Law2_ScGeom_BPMPhys_BondedContactM,LawFunctor,"Interaction law for cohesive frictional material, e.g. rock, possibly presenting joint surfaces, that can be mechanically described with a smooth contact logic [Ivars2011]_ (implemented in Yade in [Scholtes2012]_). See examples/jointedCohesiveFrictionalPM for script examples. Joint surface definitions (through stl meshes or direct definition with gts module) are illustrated there.",
+		YADE_CLASS_BASE_DOC_ATTRS(Law2_ScGeom_BPMPhys_BondedContactM,LawFunctor,"Interaction law for cohesive frictional material, e.g. rock that can be mechanically described with a smooth contact logic [Ivars2011].",
 			((bool,neverErase,false,,"Keep interactions even if particles go away from each other (only in case another constitutive law is in the scene"))
 			((bool,cracksFileExist,false,,"if true (and if :yref:`recordCracks<Law2_ScGeom_JCFpmPhys_JointedCohesiveFrictionalPM.recordCracks>`), data are appended to an existing 'cracksKey' text file; otherwise its content is reset."))
 			((string,Key,"",,"string specifying the name of saved file 'cracks___.txt', when :yref:`recordCracks<Law2_ScGeom_JCFpmPhys_JointedCohesiveFrictionalPM.recordCracks>` is true."))
@@ -91,9 +101,6 @@ class Law2_ScGeom_BPMPhys_BondedContactM: public LawFunctor{
 			((Real,totalTensCracksE,0.,,"calculate the overall energy dissipated by interparticle microcracking in tension."))
 			((Real,totalShearCracksE,0.,,"calculate the overall energy dissipated by interparticle microcracking in shear."))
                         ((Real,totalCracksSurface,0.,,"calculate the total cracked surface."))
-// 			((bool,recordSlips,false,,"if true, data about frictional interactions that slip are stored in a text file cracksKey.txt."))
-// 			((int,nbSlips,0,,"number of slips."))
-//			((Real,totalSlipE,0.,,"calculate the overall energy dissipated by interparticle friction."))
 		);
 		DECLARE_LOGGER;	
 };
