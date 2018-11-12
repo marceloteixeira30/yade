@@ -20,12 +20,10 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	
 	Body* b1 = Body::byId(id1,scene).get();
 	Body* b2 = Body::byId(id2,scene).get();
-
-	Real Dtensile=phys->FnMax/phys->kn;
 	
 	string fileCracks = "cracks_"+Key+".txt";
 	/// Defines the interparticular distance used for computation
-	Real D = 0;
+	//Real D = 0;
 
 	/* This is for setting the equilibrium distance between all cohesive elements at the first contact detection*/
 	if ( contact->isFresh(scene) ) { 
@@ -55,19 +53,23 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	if (phys->isCohesive)
 	{
 	  /* Normal force from the beam*/
-	  Real prevD = phys->previousDisplacement
+	  Real prevD = phys->previousDisplacement;
 	  Real beamIncFn = phys->beamNormalStiffness * phys->beamArea * (cohesive_D-prevD);
 	  Real beamNForce = phys->beamNormalForce;
 	  beamNForce = beamNForce + beamIncFn;
 	  
 	  /* Shear force from the beam*/
-	  shearForce = geom->rotate(phys->shearForce);
+	  Vector3r& beamSForce = phys->beamShearForce;
+	  beamSForce = geom->rotate(phys->beamShearForce);
 	  const Vector3r& incrementalShear = geom->shearIncrement();
-	  shearForce -= phys->beaShearStiffness * phys->beamArea * incrementalShear;
+	  beamSForce -= phys->beamShearStiffness * phys->beamArea * incrementalShear;
 	  
 	  /* Moments from the beam*/
 	  const Real& dt = scene->dt;
+	  State* de1 = Body::byId(id1,scene)->state.get();
+	  State* de2 = Body::byId(id2,scene)->state.get();
 	  Vector3r relAngVel = geom->getRelAngVel(de1,de2,dt);
+	  
 	  /* Bending moment from the beam*/
 	  Vector3r relAngVelBend = relAngVel - geom->normal.dot(relAngVel)*geom->normal; // keep only the bending part
 	  Vector3r relRotBend = relAngVelBend*dt; // relative rotation due to rolling behaviour	
@@ -168,10 +170,10 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	  st2->nbInitBonds++;
 	}
 	
-	if ( contactPhysics->isCohesive ) {
+	/*if ( contactPhysics->isCohesive ) {
 	  contactPhysics->FnMax = std::min(SigT1,SigT2)*contactPhysics->crossSection;
 	  contactPhysics->FsMax = std::min(Coh1,Coh2)*contactPhysics->crossSection;
-	}
+	}*/
 	
         // frictional properties      
         contactPhysics->isCohesive? contactPhysics->tanFrictionAngle = std::tan(std::min(f1,f2)) : contactPhysics->tanFrictionAngle = std::tan(std::min(rf1,rf2));
