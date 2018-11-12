@@ -64,6 +64,7 @@ class BPMPhys: public NormShearPhys {
 			((Real,beamPolarMomInertia,0.,,"beamPolarMomInertia=(1/2)*pi*R^4. [m]"))
 			((Real,previousDisplacement,0.,,"displacement between two particles from the previous step. [m]"))
 			((bool,breakOccurred,0,,"Flag used to trigger retriangulation as soon as a cohesive bond breaks in FlowEngine (for DFNFlow use only)"))
+			((Real,beamBeta,0.,,"Parameter to define the influence of the moments on the calculated maximum stress. [-]"))
 			,
 			createIndex();
 			,

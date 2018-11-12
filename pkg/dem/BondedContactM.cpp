@@ -34,25 +34,14 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	
 	Real D = geom->penetrationDepth;
 	Real cohesive_D = geom->penetrationDepth - phys->initD;
-	/* NormalForce */
-	Real Fn = 0;
-	/* ShearForce */
-	Vector3r& shearForce = phys->shearForce;
-	
-	/* Frictional contact due to overlap*/
-	if (D > 0.0)
-	{
-	  Fn = phys->kn*D; 
-	  shearForce = geom->rotate(phys->shearForce);
-	  const Vector3r& incrementalShear = geom->shearIncrement();
-	  shearForce -= phys->ks*incrementalShear;
-	}
 	
 	// Cohesive variables declaration
 	Real beamNForce = phys->beamNormalForce;
 	Vector3r& beamSForce = phys->beamShearForce;
 	Vector3r& momentBend = phys->beamMomentBending;
 	Vector3r& momentTwist = phys->beamMomentTwist;
+	Real normalStress = 0.;
+	Real shearStress = 0.;
 	
 	/* Beam forces due to cohesive contact*/	
 	if (phys->isCohesive)
@@ -86,6 +75,34 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  // incremental formulation for the torsional moment
 	  momentTwist = geom->rotate(momentTwist); // rotate moment vector (updated)
 	  momentTwist = momentTwist-phys->beamShearStiffness*phys->beamPolarMomInertia*relRotTwist; // FIXME: sign?
+	  
+	  /* Limits for the moments and forces*/
+	  Real sign = (cohesive_D > 0) ? 1 : ((cohesive_D < 0) ? -1 : 0);
+	  normalStress = -((sign * beamNForce) / phys->beamArea) + (phys->beamBeta * (momentBend.norm() * phys->beamRadius) / phys->beamMomInertia);
+	  shearStress = (beamSForce.norm() / phys->beamArea) + (phys->beamBeta * (momentTwist.norm() * phys->beamRadius) / phys->beamPolarMomInertia);
+	}
+	
+	/* NormalForce */
+	Real Fn = 0;
+	/* ShearForce */
+	Vector3r& shearForce = phys->shearForce;
+	
+	/* Frictional contact due to overlap*/
+	if (D > 0.0)
+	{
+	  Fn = phys->kn*D; 
+	  shearForce = geom->rotate(phys->shearForce);
+	  const Vector3r& incrementalShear = geom->shearIncrement();
+	  shearForce -= phys->ks*incrementalShear;
+	  /* Mohr-Coulomb criterion*/
+	  Real maxFs = Fn*phys->tanFrictionAngle;
+	  Real scalarShearForce = shearForce.norm();
+	  if (scalarShearForce > maxFs) {
+	    if (scalarShearForce != 0)
+	      shearForce*=maxFs/scalarShearForce;
+	    else
+	      shearForce=Vector3r::Zero();
+	  }
 	}
 	
 	/* Apply forces */
@@ -141,6 +158,8 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	Real sheCoh2	= yade2->shearCohesion;
 	Real lambda1	= yade1->lambda;
 	Real lambda2	= yade2->lambda;
+	Real beta1	= yade1->beta;
+	Real beta2	= yade2->beta;
 
 	/* From interaction geometry */
 	Real R1= geom->radius1;
@@ -167,6 +186,7 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	  st1->nbInitBonds++;
 	  st2->nbInitBonds++;
 	}
+	contactPhysics->beamBeta = (beta1 + beta2)/2.;
 	
 	/*if ( contactPhysics->isCohesive ) {
 	  contactPhysics->FnMax = std::min(SigT1,SigT2)*contactPhysics->crossSection;
