@@ -19,7 +19,7 @@ class BPMState: public State {
 	REGISTER_CLASS_INDEX(BPMState,State);
 };
 REGISTER_SERIALIZABLE(BPMState);
-JointedCohesiveFrictionalPM
+
 /** This class holds information associated with each body */
 class BPMMat: public FrictMat {
   	public:
