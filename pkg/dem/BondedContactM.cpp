@@ -51,18 +51,21 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  shearForce -= phys->ks*incrementalShear;
 	}
 	
+	/* Beam forces due to cohesive contact*/	
 	if (phys->isCohesive)
 	{
 	  /* Normal force from the beam*/
 	  Real prevD = phys->previousDisplacement
-	  Real beamIncFn = beamNormalStiffness * phys->beamArea * (cohesive_D-prevD);
+	  Real beamIncFn = phys->beamNormalStiffness * phys->beamArea * (cohesive_D-prevD);
 	  Real beamNForce = phys->beamNormalForce;
 	  beamNForce = beamNForce + beamIncFn;
 	  
 	  /* Shear force from the beam*/
+	  shearForce = geom->rotate(phys->shearForce);
+	  const Vector3r& incrementalShear = geom->shearIncrement();
+	  shearForce -= phys->beaShearStiffness * phys->beamArea * incrementalShear;
 	  
-	  
-	  	  
+	  /* Moments from the beam*/
 	  const Real& dt = scene->dt;
 	  Vector3r relAngVel = geom->getRelAngVel(de1,de2,dt);
 	  /* Bending moment from the beam*/
@@ -80,7 +83,6 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  Vector3r& momentTwist = phys->beamMomentTwist;
 	  momentTwist = geom->rotate(momentTwist); // rotate moment vector (updated)
 	  momentTwist = momentTwist-phys->ktw*relRotTwist; // FIXME: sign?
-	  
 	}
 	
 	/* Apply forces */
@@ -123,8 +125,12 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	/* From material properties */
 	Real E1 	= yade1->young;
 	Real E2 	= yade2->young;
+	Real cohesiveE1	= yade1->cohesiveYoung;
+	Real cohesiveE2	= yade2->cohesiveYoung;
 	Real v1 	= yade1->poisson;
 	Real v2 	= yade2->poisson;
+	Real cohesiveV1 = yade1->cohesivePoisson;
+	Real cohesiveV2 = yade2->cohesivePoisson;
 	Real f1 	= yade1->frictionAngle;
 	Real f2 	= yade2->frictionAngle;
 	Real rf1 	= yade1->residualFrictionAngle>=0? yade1->residualFrictionAngle: yade1->frictionAngle;
@@ -140,11 +146,13 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	Real R1= geom->radius1;
 	Real R2= geom->radius2;
 	
-	/* From contact properties*/
+	/* From cohesive contact properties*/
 	contactPhysics->beamRadius = min(lambda1,lambda2)*pow(min(R1,R2),2);
 	contactPhysics->beamArea = Mathr::PI*contactPhysics->beamRadius;
 	contactPhysics->beamMomInertia = (1/4)*Mathr::PI*pow(contactPhysics->beamRadius,4);
 	contactPhysics->beamPolarMomInertia = (1/2)*Mathr::PI*pow(contactPhysics->beamRadius,4);
+	contactPhysics->beamNormalStiffness = 2.*cohesiveE1*R1*cohesiveE2*R2/(cohesiveE1*R1+cohesiveE2*R2);
+	contactPhysics->beamShearStiffness = 2.*cohesiveE1*R1*cohesiveV1*cohesiveE2*R2*cohesiveV2/(cohesiveE1*R1*cohesiveV1+cohesiveE2*R2*cohesiveV2);
 
 	/* Pass values to BPMPhys.*/
 	

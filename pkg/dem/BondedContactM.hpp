@@ -19,7 +19,7 @@ class BPMState: public State {
 	REGISTER_CLASS_INDEX(BPMState,State);
 };
 REGISTER_SERIALIZABLE(BPMState);
-
+JointedCohesiveFrictionalPM
 /** This class holds information associated with each body */
 class BPMMat: public FrictMat {
   	public:
@@ -31,8 +31,8 @@ class BPMMat: public FrictMat {
 		((Real,residualFrictionAngle,-1.,,"Defines the residual friction angle (when contacts are not cohesive). residualFrictionAngle=frictionAngle if not specified. [degrees]"))
 		((Real,normalCohesion,0.,,"Defines the maximum admissible normal stress in traction in the matrix. [Pa]"))
 		((Real,shearCohesion,0.,,"Defines the maximum admissible tangential stress, for Fn=0, in the matrix. [Pa]"))
-		((Real,beamNormalStiffness,0.,,"Defines the normal stiffness of the cohesive contact. [Pa]"))
-		((Real,beamShearStiffness,0.,,"Defines the normal stiffness of the cohesive contact. [Pa]"))
+		((Real,cohesiveYoung,0.,,"Defines the Young's modulus of the cohesive contact. [Pa]"))
+		((Real,cohesivePoisson,0.,,"Defines the Poisson coefficient of the cohesive contact. [-]"))
 		((Real,lambda,0.,,"Parameter defining the radius of the cohesive contact. [-]"))
 		((Real,beta,0.,,"Parameter to define the influence of the moments on the calculated maximum stress. [-]"))
 		,
@@ -50,6 +50,8 @@ class BPMPhys: public NormShearPhys {
 		YADE_CLASS_BASE_DOC_ATTRS_CTOR_PY(BPMPhys,NormShearPhys,"Representation of a single interaction of the BPM type, storage for relevant parameters",
 			((Real,beamNormalForce,0.,,"save the normal force for next step increment.[N]"))
 			((Real,beamShearForce,0.,,"save the shear force for next step increment.[N]"))
+			((Real,beamNormalStiffness,0.,,"normal stiffness for the beam (cohesion between particles).[Pa]"))
+			((Real,beamShearStiffness,0.,,"shear stiffness for the beam (cohesion between particles).[Pa]"))
 			((Real,beamMomentTwist,0.,,"twist moment calculated for the beam.[Pa.m]"))
 			((Real,beamMomentBending,0.,,"twist moment calculated for the beam.[Pa.m]"))
 			((Real,initD,0.,,"equilibrium distance for interacting particles. Computed as the interparticular distance at first contact detection."))
