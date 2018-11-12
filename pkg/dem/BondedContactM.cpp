@@ -34,20 +34,25 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	
 	Real D = geom->penetrationDepth;
 	Real cohesive_D = geom->penetrationDepth - phys->initD;
-
+	/* NormalForce */
+	Real Fn = 0;
+	/* ShearForce */
+	Vector3r& shearForce = phys->shearForce;
+	
 	/* Frictional contact due to overlap*/
 	if (D > 0.0)
 	{
-	  /* NormalForce */
-	  Real Fn = 0;
-	  Fn = phys->kn*D;
-	  
-	  /* ShearForce */
-	  Vector3r& shearForce = phys->shearForce;
+	  Fn = phys->kn*D; 
 	  shearForce = geom->rotate(phys->shearForce);
 	  const Vector3r& incrementalShear = geom->shearIncrement();
 	  shearForce -= phys->ks*incrementalShear;
 	}
+	
+	// Cohesive variables declaration
+	Real beamNForce = phys->beamNormalForce;
+	Vector3r& beamSForce = phys->beamShearForce;
+	Vector3r& momentBend = phys->beamMomentBending;
+	Vector3r& momentTwist = phys->beamMomentTwist;
 	
 	/* Beam forces due to cohesive contact*/	
 	if (phys->isCohesive)
@@ -55,11 +60,9 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  /* Normal force from the beam*/
 	  Real prevD = phys->previousDisplacement;
 	  Real beamIncFn = phys->beamNormalStiffness * phys->beamArea * (cohesive_D-prevD);
-	  Real beamNForce = phys->beamNormalForce;
 	  beamNForce = beamNForce + beamIncFn;
 	  
 	  /* Shear force from the beam*/
-	  Vector3r& beamSForce = phys->beamShearForce;
 	  beamSForce = geom->rotate(phys->beamShearForce);
 	  const Vector3r& incrementalShear = geom->shearIncrement();
 	  beamSForce -= phys->beamShearStiffness * phys->beamArea * incrementalShear;
@@ -74,17 +77,15 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  Vector3r relAngVelBend = relAngVel - geom->normal.dot(relAngVel)*geom->normal; // keep only the bending part
 	  Vector3r relRotBend = relAngVelBend*dt; // relative rotation due to rolling behaviour	
 	  // incremental formulation for the bending moment (as for the shear part)
-	  Vector3r& momentBend = phys->beamMomentBending;
 	  momentBend = geom->rotate(momentBend); // rotate moment vector (updated)
-	  momentBend = momentBend-phys->kr*relRotBend;
+	  momentBend = momentBend-phys->beamNormalStiffness*phys->beamMomInertia*relRotBend;
 	  
 	  // *** Torsion ***//
 	  Vector3r relAngVelTwist = geom->normal.dot(relAngVel)*geom->normal;
 	  Vector3r relRotTwist = relAngVelTwist*dt; // component of relative rotation along n  FIXME: sign?
 	  // incremental formulation for the torsional moment
-	  Vector3r& momentTwist = phys->beamMomentTwist;
 	  momentTwist = geom->rotate(momentTwist); // rotate moment vector (updated)
-	  momentTwist = momentTwist-phys->ktw*relRotTwist; // FIXME: sign?
+	  momentTwist = momentTwist-phys->beamShearStiffness*phys->beamPolarMomInertia*relRotTwist; // FIXME: sign?
 	}
 	
 	/* Apply forces */
@@ -96,9 +97,6 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
  	//applyForceAtContactPoint(f, geom->contactPoint, I->getId2(), b2->state->pos, I->getId1(), b1->state->pos, scene);
 	scene->forces.addForce (id1,-f);
 	scene->forces.addForce (id2, f);
-	
-	// simple solution to avoid torque computation for particles interacting on a smooth joint 
-	if ( (phys->isOnJoint)&&(smoothJoint) ) return true;
 	
 	/// those lines are needed if rootBody->forces.addForce and rootBody->forces.addMoment are used instead of applyForceAtContactPoint -> NOTE need to check for accuracy!!!
 	scene->forces.addTorque(id1,(geom->radius1-0.5*geom->penetrationDepth)* geom->normal.cross(-f));
@@ -164,7 +162,7 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	
 	// cohesive properties
 	///to set if the contact is cohesive or not
-	if ( ((cohesiveTresholdIteration < 0) || (scene->iter < cohesiveTresholdIteration)) && (std::min(SigT1,SigT2)>0 || std::min(Coh1,Coh2)>0) && (yade1->type == yade2->type)){ 
+	if ( ((cohesiveTresholdIteration < 0) || (scene->iter < cohesiveTresholdIteration)) && (std::min(norCoh1,norCoh2)>0 || std::min(sheCoh1,sheCoh2)>0) && (yade1->type == yade2->type)){ 
 	  contactPhysics->isCohesive=true;
 	  st1->nbInitBonds++;
 	  st2->nbInitBonds++;

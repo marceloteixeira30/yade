@@ -49,11 +49,11 @@ class BPMPhys: public NormShearPhys {
 
 		YADE_CLASS_BASE_DOC_ATTRS_CTOR_PY(BPMPhys,NormShearPhys,"Representation of a single interaction of the BPM type, storage for relevant parameters",
 			((Real,beamNormalForce,0.,,"save the normal force for next step increment.[N]"))
-			((Real,beamShearForce,0.,,"save the shear force for next step increment.[N]"))
+			((Vector3r,beamShearForce,Vector3r::Zero(),,"save the shear force for next step increment.[N]"))
 			((Real,beamNormalStiffness,0.,,"normal stiffness for the beam (cohesion between particles).[Pa]"))
 			((Real,beamShearStiffness,0.,,"shear stiffness for the beam (cohesion between particles).[Pa]"))
-			((Real,beamMomentTwist,0.,,"twist moment calculated for the beam.[Pa.m]"))
-			((Real,beamMomentBending,0.,,"twist moment calculated for the beam.[Pa.m]"))
+			((Vector3r,beamMomentTwist,Vector3r(0,0,0),,"twist moment calculated for the beam.[Pa.m]"))
+			((Vector3r,beamMomentBending,Vector3r(0,0,0),,"bending moment calculated for the beam.[Pa.m]"))
 			((Real,initD,0.,,"equilibrium distance for interacting particles. Computed as the interparticular distance at first contact detection."))
 			((bool,isBroken,false,,"flag for broken interactions"))
 			((bool,isCohesive,false,,"If false, particles interact in a frictional way. If true, particles are bonded."))
