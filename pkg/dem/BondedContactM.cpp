@@ -46,30 +46,30 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	/* Beam forces due to cohesive contact*/	
 	if (phys->isCohesive)
 	{
-	  /* Normal force from the beam*/
+	  /* Normal force from the beam */
 	  Real prevD = phys->previousDisplacement;
 	  Real beamIncFn = phys->beamNormalStiffness * phys->beamArea * (cohesive_D-prevD);
 	  beamNForce = beamNForce + beamIncFn;
 	  
-	  /* Shear force from the beam*/
+	  /* Shear force from the beam */
 	  beamSForce = geom->rotate(phys->beamShearForce);
 	  const Vector3r& incrementalShear = geom->shearIncrement();
 	  beamSForce -= phys->beamShearStiffness * phys->beamArea * incrementalShear;
 	  
-	  /* Moments from the beam*/
+	  /* Moments from the beam */
 	  const Real& dt = scene->dt;
 	  State* de1 = Body::byId(id1,scene)->state.get();
 	  State* de2 = Body::byId(id2,scene)->state.get();
 	  Vector3r relAngVel = geom->getRelAngVel(de1,de2,dt);
 	  
-	  /* Bending moment from the beam*/
+	  /* Bending moment */
 	  Vector3r relAngVelBend = relAngVel - geom->normal.dot(relAngVel)*geom->normal; // keep only the bending part
 	  Vector3r relRotBend = relAngVelBend*dt; // relative rotation due to rolling behaviour	
 	  // incremental formulation for the bending moment (as for the shear part)
 	  momentBend = geom->rotate(momentBend); // rotate moment vector (updated)
 	  momentBend = momentBend-phys->beamNormalStiffness*phys->beamMomInertia*relRotBend;
 	  
-	  // *** Torsion ***//
+	  /* Torsion */
 	  Vector3r relAngVelTwist = geom->normal.dot(relAngVel)*geom->normal;
 	  Vector3r relRotTwist = relAngVelTwist*dt; // component of relative rotation along n  FIXME: sign?
 	  // incremental formulation for the torsional moment
@@ -80,6 +80,56 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  Real sign = (cohesive_D > 0) ? 1 : ((cohesive_D < 0) ? -1 : 0);
 	  normalStress = -((sign * beamNForce) / phys->beamArea) + (phys->beamBeta * (momentBend.norm() * phys->beamRadius) / phys->beamMomInertia);
 	  shearStress = (beamSForce.norm() / phys->beamArea) + (phys->beamBeta * (momentTwist.norm() * phys->beamRadius) / phys->beamPolarMomInertia);
+	  
+	  if (fabs(shearStress) > fabs(phys->beamShearCohesion))
+	  {
+	    nbShearCracks++;
+	    phys->isCohesive = 0;
+	    /// Do we need both the following lines?
+	    phys->breakOccurred = true;  // flag to trigger remesh for DFNFlowEngine
+	    phys->isBroken = true; // flag for DFNFlowEngine
+	    
+	    // update body state with the number of broken bonds -> do we really need that?
+	    BPMState* st1=dynamic_cast<BPMState*>(b1->state.get());
+	    BPMState* st2=dynamic_cast<BPMState*>(b2->state.get());
+	    st1->nbBrokenBonds++;
+	    st2->nbBrokenBonds++;
+	    st1->damageIndex+=1.0/st1->nbInitBonds;
+	    st2->damageIndex+=1.0/st2->nbInitBonds;    
+	    
+	    if ( D < 0 ) { // spheres do not touch
+                if (!neverErase) return false;
+                else {
+                    phys->shearForce = Vector3r::Zero();
+                    phys->normalForce = Vector3r::Zero();
+                    return true;
+                }
+	    }
+	  }
+	  
+	  if (fabs(normalStress) > fabs(phys->beamNormalCohesion))
+	  {
+	    nbTensCracks++;
+	    phys->isCohesive = 0;
+	    /// Do we need both the following lines?
+	    phys->breakOccurred = true;  // flag to trigger remesh for DFNFlowEngine
+	    phys->isBroken = true; // flag for DFNFlowEngine
+	    
+            // update body state with the number of broken bonds -> do we really need that?
+	    BPMState* st1=dynamic_cast<BPMState*>(b1->state.get());
+	    BPMState* st2=dynamic_cast<BPMState*>(b2->state.get());
+            st1->nbBrokenBonds++;
+	    st2->nbBrokenBonds++;
+	    st1->damageIndex+=1.0/st1->nbInitBonds;
+	    st2->damageIndex+=1.0/st2->nbInitBonds;
+	    
+	      if (!neverErase) return false; 
+	    else {
+	      phys->shearForce = Vector3r::Zero();
+	      phys->normalForce = Vector3r::Zero();
+	      return true;
+	    }
+	  }
 	}
 	
 	/* NormalForce */
