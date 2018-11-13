@@ -28,7 +28,6 @@ class BPMMat: public FrictMat {
 		
 	YADE_CLASS_BASE_DOC_ATTRS_CTOR(BPMMat,FrictMat,"Cohesive frictional material, for use with other BPM classes",
 		((int,type,0,,"If particles of two different types interact, it will be with friction only (no cohesion).[-]"))
-		((Real,residualFrictionAngle,-1.,,"Defines the residual friction angle (when contacts are not cohesive). residualFrictionAngle=frictionAngle if not specified. [degrees]"))
 		((Real,normalCohesion,0.,,"Defines the maximum admissible normal stress in traction in the matrix. [Pa]"))
 		((Real,shearCohesion,0.,,"Defines the maximum admissible tangential stress in the matrix. [Pa]"))
 		((Real,cohesiveYoung,0.,,"Defines the Young's modulus of the cohesive contact. [Pa]"))
@@ -63,7 +62,7 @@ class BPMPhys: public NormShearPhys {
 			((Real,beamRadius,0.,,"beamRadius=lambda*Rmin. [m]"))
 			((Real,beamArea,0.,,"beamArea=pi*beamRadius^2. [m^2]"))
 			((Real,beamMomInertia,0.,,"beamMomInertia=(1/4)*pi*R^4. [m^4]"))
-			((Real,beamPolarMomInertia,0.,,"beamPolarMomInertia=(1/2)*pi*R^4. [m]"))
+			((Real,beamPolarMomInertia,0.,,"beamPolarMomInertia=(1/2)*pi*R^4. [m^4]"))
 			((Real,previousDisplacement,0.,,"displacement between two particles from the previous step. [m]"))
 			((bool,breakOccurred,0,,"Flag used to trigger retriangulation as soon as a cohesive bond breaks in FlowEngine (for DFNFlow use only)"))
 			((Real,beamBeta,0.,,"Parameter to define the influence of the moments on the calculated maximum stress. [-]"))

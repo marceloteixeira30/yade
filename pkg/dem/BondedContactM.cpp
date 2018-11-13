@@ -225,8 +225,6 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	Real cohesiveV2 = yade2->cohesivePoisson;
 	Real f1 	= yade1->frictionAngle;
 	Real f2 	= yade2->frictionAngle;
-	Real rf1 	= yade1->residualFrictionAngle>=0? yade1->residualFrictionAngle: yade1->frictionAngle;
-	Real rf2 	= yade2->residualFrictionAngle>=0? yade2->residualFrictionAngle: yade2->frictionAngle;
 	Real norCoh1	= yade1->normalCohesion;
 	Real norCoh2	= yade2->normalCohesion;
 	Real sheCoh1	= yade1->shearCohesion;
@@ -257,8 +255,8 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	if ( contactPhysics->isCohesive ) {
 	  contactPhysics->beamRadius = min(lambda1,lambda2)*pow(min(R1,R2),2);
 	  contactPhysics->beamArea = Mathr::PI*contactPhysics->beamRadius;
-	  contactPhysics->beamMomInertia = (1/4)*Mathr::PI*pow(contactPhysics->beamRadius,4);
-	  contactPhysics->beamPolarMomInertia = (1/2)*Mathr::PI*pow(contactPhysics->beamRadius,4);
+	  contactPhysics->beamMomInertia = (1./4.)*Mathr::PI*pow(contactPhysics->beamRadius,4);
+	  contactPhysics->beamPolarMomInertia = (1./2.)*Mathr::PI*pow(contactPhysics->beamRadius,4);
 	  contactPhysics->beamNormalStiffness = 2.*cohesiveE1*R1*cohesiveE2*R2/(cohesiveE1*R1+cohesiveE2*R2);
 	  contactPhysics->beamShearStiffness = 2.*cohesiveE1*R1*cohesiveV1*cohesiveE2*R2*cohesiveV2/(cohesiveE1*R1*cohesiveV1+cohesiveE2*R2*cohesiveV2);
 	  contactPhysics->beamNormalCohesion = 2.*norCoh1*R1*norCoh2*R2/(norCoh1*R1+norCoh2*R2);
