@@ -33,8 +33,8 @@ class BPMMat: public FrictMat {
 		((Real,shearCohesion,0.,,"Defines the maximum admissible tangential stress in the matrix. [Pa]"))
 		((Real,cohesiveYoung,0.,,"Defines the Young's modulus of the cohesive contact. [Pa]"))
 		((Real,cohesivePoisson,0.,,"Defines the Poisson coefficient of the cohesive contact. [-]"))
-		((Real,lambda,0.,,"Parameter defining the radius of the cohesive contact. [-]"))
-		((Real,beta,0.,,"Parameter to define the influence of the moments on the calculated maximum stress. [-]"))
+		((Real,lambdaCohesion,0.,,"Parameter defining the radius of the cohesive contact. [-]"))
+		((Real,betaCohesion,0.,,"Parameter to define the influence of the moments on the calculated maximum stress. [-]"))
 		,
 		createIndex();
 	);
