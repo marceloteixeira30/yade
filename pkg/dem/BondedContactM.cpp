@@ -77,12 +77,15 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  momentTwist = geom->rotate(momentTwist); // rotate moment vector (updated)
 	  momentTwist = momentTwist-phys->beamShearStiffness*phys->beamPolarMomInertia*relRotTwist; // FIXME: sign?
 	  
-	  /* Limits for the moments and forces*/
-	  Real sign = (cohesive_D > 0) ? 1 : ((cohesive_D < 0) ? -1 : 0);
+	  /* Limits for the moments and forces */
+	  Real sign = (cohesive_D > 0.0) ? 1.0 : ((cohesive_D < 0.0) ? -1.0 : 0.0);
 	  normalStress = -((sign * beamNForce) / phys->beamArea) + (phys->beamBeta * (momentBend.norm() * phys->beamRadius) / phys->beamMomInertia);
 	  shearStress = (beamSForce.norm() / phys->beamArea) + (phys->beamBeta * (momentTwist.norm() * phys->beamRadius) / phys->beamPolarMomInertia);
 	  
-	  if (fabs(shearStress) > fabs(phys->beamShearCohesion))
+	  /* Update shear resistance */
+	  Real beamSCoh = (phys->beamShearCohesion - (-sign * beamNForce / phys->beamArea) * phys->tanFrictionAngle);
+	  
+	  if (fabs(shearStress) > fabs(beamSCoh))
 	  {
 	    nbShearCracks++;
 	    phys->isCohesive = 0;
