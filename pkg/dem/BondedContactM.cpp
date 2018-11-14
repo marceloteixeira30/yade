@@ -29,11 +29,11 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	if ( contact->isFresh(scene) ) { 
 	  phys->normalForce = Vector3r::Zero(); 
 	  phys->shearForce = Vector3r::Zero();
-	  phys->initD = geom->penetrationDepth;
+	  phys->initD = geom->penetrationDepth - (geom->radius1 + geom->radius2);
 	}
 	
 	D = geom->penetrationDepth;
-	Real cohesive_D = geom->penetrationDepth - phys->initD;
+	Real cohesive_D = geom->penetrationDepth - (geom->radius1 + geom->radius2 - phys->initD);
 	
 	// Cohesive variables declaration
 	Real beamNForce = phys->beamNormalForce;
@@ -188,12 +188,13 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	scene->forces.addTorque(id1,(geom->radius1-0.5*geom->penetrationDepth)* geom->normal.cross(-f));
 	scene->forces.addTorque(id2,(geom->radius2-0.5*geom->penetrationDepth)* geom->normal.cross(-f));
 	
+	Vector3r totalMoment = Vector3r::Zero();
+	totalMoment = - momentBend - momentTwist;
+	
 	if (phys->isCohesive)
 	{
-	  scene->forces.addTorque(id1,momentBend);
-	  scene->forces.addTorque(id1,momentTwist);
-	  scene->forces.addTorque(id2,momentBend);
-	  scene->forces.addTorque(id2,momentTwist);
+	  scene->forces.addTorque(id1,totalMoment);
+	  scene->forces.addTorque(id2,-totalMoment);
 	}
 	
 	return true;
