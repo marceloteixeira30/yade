@@ -27,30 +27,28 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 
 	/* This is for setting the equilibrium distance between all cohesive elements at the first contact detection*/
 	if ( contact->isFresh(scene) ) { 
-	  phys->normalForce = Vector3r::Zero(); 
+	  phys->normalForce = Vector3r::Zero();
 	  phys->shearForce = Vector3r::Zero();
 	  phys->initD = geom->penetrationDepth - (geom->radius1 + geom->radius2);
 	}
 	
 	D = geom->penetrationDepth;
-	Real cohesive_D = geom->penetrationDepth - (geom->radius1 + geom->radius2 - phys->initD);
+	Real cohesive_D = geom->penetrationDepth - (geom->radius1 + geom->radius2 + phys->initD);
+	//Real cohesive_D = geom->penetrationDepth - phys->initD;
 	
 	// Cohesive variables declaration
-	Real beamNForce = phys->beamNormalForce;
 	Vector3r& beamSForce = phys->beamShearForce;
 	Vector3r& momentBend = phys->beamMomentBending;
 	Vector3r& momentTwist = phys->beamMomentTwist;
 	Real normalStress = 0.;
 	Real shearStress = 0.;
-	Real prevD = 0.;
 	
 	/* Beam forces due to cohesive contact*/	
 	if (phys->isCohesive)
 	{
 	  /* Normal force from the beam */
-	  prevD = phys->previousDisplacement;
-	  Real beamIncFn = phys->beamNormalStiffness * phys->beamArea * (cohesive_D-prevD);
-	  beamNForce = beamNForce + beamIncFn;
+	  Real beamIncFn = phys->beamNormalStiffness * phys->beamArea * (cohesive_D-phys->previousDisplacement);
+	  phys->beamNormalForce = phys->beamNormalForce + beamIncFn;
 	  
 	  /* Shear force from the beam */
 	  beamSForce = geom->rotate(phys->beamShearForce);
@@ -79,11 +77,11 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  
 	  /* Limits for the moments and forces */
 	  Real sign = (cohesive_D > 0.0) ? 1.0 : ((cohesive_D < 0.0) ? -1.0 : 0.0);
-	  normalStress = -((sign * beamNForce) / phys->beamArea) + (phys->beamBeta * (momentBend.norm() * phys->beamRadius) / phys->beamMomInertia);
+	  normalStress = -((sign * phys->beamNormalForce) / phys->beamArea) + (phys->beamBeta * (momentBend.norm() * phys->beamRadius) / phys->beamMomInertia);
 	  shearStress = (beamSForce.norm() / phys->beamArea) + (phys->beamBeta * (momentTwist.norm() * phys->beamRadius) / phys->beamPolarMomInertia);
 	  
 	  /* Update shear resistance */
-	  Real beamSCoh = (phys->beamShearCohesion - (-sign * beamNForce / phys->beamArea) * phys->tanFrictionAngle);
+	  Real beamSCoh = (phys->beamShearCohesion - (-sign * phys->beamNormalForce / phys->beamArea) * phys->tanFrictionAngle);
 	  
 	  if (fabs(shearStress) > fabs(beamSCoh))
 	  {
@@ -134,21 +132,19 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	      return true;
 	    }
 	  }
-	  phys->beamNormalForce = beamNForce;
 	  phys->beamShearForce = beamSForce;
 	  phys->beamMomentBending = momentBend;
 	  phys->beamMomentTwist = momentTwist;
 	}
-	
-	/* NormalForce */
+	// NormalForce
 	Real Fn = 0;
-	/* ShearForce */
+	//ShearForce 
 	Vector3r& shearForce = phys->shearForce;
 	
 	/* Frictional contact due to overlap*/
 	if (D > 0.0)
 	{
-	  Fn = phys->kn*D; 
+	  Fn = phys->kn*D;
 	  shearForce = geom->rotate(phys->shearForce);
 	  const Vector3r& incrementalShear = geom->shearIncrement();
 	  shearForce -= phys->ks*incrementalShear;
@@ -167,7 +163,7 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	/* Apply forces */
 	if (phys->isCohesive)
 	{
-	  phys->normalForce = (Fn*geom->normal) + (beamNForce*geom->normal);
+	  phys->normalForce = (Fn*geom->normal) + (phys->beamNormalForce*geom->normal);
 	  f = phys->normalForce + shearForce + beamSForce;
 	}
 	else
@@ -177,7 +173,7 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	}
 	
 	phys->shearForce = shearForce;
-	phys->previousDisplacement = geom->penetrationDepth;
+	phys->previousDisplacement = cohesive_D;
 	  
 	/// applyForceAtContactPoint computes torque also and, for now, we don't want rotation for particles on joint (some errors in calculation due to specific geometry) 
  	//applyForceAtContactPoint(f, geom->contactPoint, I->getId2(), b2->state->pos, I->getId1(), b1->state->pos, scene);
