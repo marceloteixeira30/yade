@@ -34,7 +34,6 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	
 	D = geom->penetrationDepth;
 	Real cohesive_D = geom->penetrationDepth - (geom->radius1 + geom->radius2 + phys->initD);
-	//Real cohesive_D = geom->penetrationDepth - phys->initD;
 	
 	// Cohesive variables declaration
 	Vector3r& beamSForce = phys->beamShearForce;
@@ -87,11 +86,10 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  {
 	    nbShearCracks++;
 	    phys->isCohesive = 0;
-	    /// Do we need both the following lines?
 	    phys->breakOccurred = true;  // flag to trigger remesh for DFNFlowEngine
 	    phys->isBroken = true; // flag for DFNFlowEngine
 	    
-	    // update body state with the number of broken bonds -> do we really need that?
+	    // update body state with the number of broken bonds
 	    BPMState* st1=dynamic_cast<BPMState*>(b1->state.get());
 	    BPMState* st2=dynamic_cast<BPMState*>(b2->state.get());
 	    st1->nbBrokenBonds++;
@@ -113,11 +111,10 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  {
 	    nbTensCracks++;
 	    phys->isCohesive = 0;
-	    /// Do we need both the following lines?
 	    phys->breakOccurred = true;  // flag to trigger remesh for DFNFlowEngine
 	    phys->isBroken = true; // flag for DFNFlowEngine
 	    
-            // update body state with the number of broken bonds -> do we really need that?
+            // update body state with the number of broken bonds
 	    BPMState* st1=dynamic_cast<BPMState*>(b1->state.get());
 	    BPMState* st2=dynamic_cast<BPMState*>(b2->state.get());
             st1->nbBrokenBonds++;
