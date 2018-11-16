@@ -129,9 +129,6 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	      return true;
 	    }
 	  }
-	  phys->beamShearForce = beamSForce;
-	  phys->beamMomentBending = momentBend;
-	  phys->beamMomentTwist = momentTwist;
 	}
 	// NormalForce
 	Real Fn = 0;
@@ -169,7 +166,6 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  f = phys->normalForce + shearForce;
 	}
 	
-	phys->shearForce = shearForce;
 	phys->previousDisplacement = cohesive_D;
 	  
 	/// applyForceAtContactPoint computes torque also and, for now, we don't want rotation for particles on joint (some errors in calculation due to specific geometry) 
