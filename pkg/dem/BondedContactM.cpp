@@ -143,7 +143,7 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  const Vector3r& incrementalShear = geom->shearIncrement();
 	  shearForce -= phys->ks*incrementalShear;
 	  /* Mohr-Coulomb criterion*/
-	  Real maxFs = Fn*phys->tanFrictionAngle;
+	  Real maxFs = Fn*phys->tanResidualFrictionAngle;
 	  Real scalarShearForce = shearForce.norm();
 	  if (scalarShearForce > maxFs) {
 	    if (scalarShearForce != 0)
@@ -226,6 +226,8 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	Real lambda2	= yade2->lambdaCohesion;
 	Real beta1	= yade1->betaCohesion;
 	Real beta2	= yade2->betaCohesion;
+	Real rf1 	= yade1->residualFrictionAngle>=0? yade1->residualFrictionAngle: yade1->frictionAngle;
+	Real rf2 	= yade2->residualFrictionAngle>=0? yade2->residualFrictionAngle: yade2->frictionAngle;
 
 	/* From interaction geometry */
 	Real R1= geom->radius1;
@@ -257,8 +259,9 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	  contactPhysics->beamBeta = (beta1 + beta2)/2.;
 	}
 	
-        // frictional properties      
+        // frictional properties   
         contactPhysics->tanFrictionAngle = std::tan(std::min(f1,f2));
+	contactPhysics->tanResidualFrictionAngle = std::tan(std::min(rf1,rf2));
 
 	interaction->phys = contactPhysics;
 }

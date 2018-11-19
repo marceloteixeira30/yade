@@ -34,6 +34,7 @@ class BPMMat: public FrictMat {
 		((Real,cohesivePoisson,0.,,"Defines the Poisson coefficient of the cohesive contact. [-]"))
 		((Real,lambdaCohesion,0.,,"Parameter defining the radius of the cohesive contact. [-]"))
 		((Real,betaCohesion,0.,,"Parameter to define the influence of the moments on the calculated maximum stress. [-]"))
+		((Real,residualFrictionAngle,-1.,,"Defines the residual friction angle (when contacts are not cohesive). residualFrictionAngle=frictionAngle if not specified. [degrees]"))
 		,
 		createIndex();
 	);
@@ -59,6 +60,7 @@ class BPMPhys: public NormShearPhys {
 			((bool,isBroken,false,,"flag for broken interactions"))
 			((bool,isCohesive,false,,"If false, particles interact in a frictional way. If true, particles are bonded."))
 			((Real,tanFrictionAngle,0.,,"tangent of Coulomb friction angle for this interaction (auto. computed). [-]"))
+			((Real,tanResidualFrictionAngle,0.,,"tangent of Coulomb residual friction angle for this interaction (friction contact). [-]"))
 			((Real,beamRadius,0.,,"beamRadius=lambda*Rmin. [m]"))
 			((Real,beamArea,0.,,"beamArea=pi*beamRadius^2. [m^2]"))
 			((Real,beamMomInertia,0.,,"beamMomInertia=(1/4)*pi*R^4. [m^4]"))
