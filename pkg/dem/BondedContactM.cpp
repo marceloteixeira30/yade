@@ -36,6 +36,7 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	Real cohesive_D = geom->penetrationDepth - (geom->radius1 + geom->radius2 + phys->initD);
 	
 	// Cohesive variables declaration
+	Real& beamNForce = phys->beamNormalForce;
 	Vector3r& beamSForce = phys->beamShearForce;
 	Vector3r& momentBend = phys->beamMomentBending;
 	Vector3r& momentTwist = phys->beamMomentTwist;
@@ -47,7 +48,7 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	{
 	  /* Normal force from the beam */
 	  Real beamIncFn = phys->beamNormalStiffness * phys->beamArea * (cohesive_D-phys->previousDisplacement);
-	  phys->beamNormalForce = phys->beamNormalForce + beamIncFn;
+	  beamNForce = beamNForce + beamIncFn;  
 	  
 	  /* Shear force from the beam */
 	  beamSForce = geom->rotate(phys->beamShearForce);
@@ -76,11 +77,12 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  
 	  /* Limits for the moments and forces */
 	  Real sign = (cohesive_D > 0.0) ? 1.0 : ((cohesive_D < 0.0) ? -1.0 : 0.0);
-	  normalStress = -((sign * phys->beamNormalForce) / phys->beamArea) + (phys->beamBeta * (momentBend.norm() * phys->beamRadius) / phys->beamMomInertia);
+	  normalStress = -((sign * beamNForce) / phys->beamArea) + (phys->beamBeta * (momentBend.norm() * phys->beamRadius) / phys->beamMomInertia);
 	  shearStress = (beamSForce.norm() / phys->beamArea) + (phys->beamBeta * (momentTwist.norm() * phys->beamRadius) / phys->beamPolarMomInertia);
 	  
 	  /* Update shear resistance */
-	  Real beamSCoh = (phys->beamShearCohesion - (-sign * phys->beamNormalForce / phys->beamArea) * phys->tanFrictionAngle);
+	  Real& beamSCoh = phys->beamSCoh;
+	  beamSCoh = (phys->beamShearCohesion + (sign * beamNForce / phys->beamArea) * phys->tanFrictionAngle);
 	  
 	  if (fabs(shearStress) > fabs(beamSCoh))
 	  {
@@ -107,7 +109,7 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	    }
 	  }
 	  
-	  if (fabs(normalStress) > fabs(phys->beamNormalCohesion))
+	  if (fabs(normalStress) > fabs(phys->beamNormalCohesion) && cohesive_D < 0.0)
 	  {
 	    nbTensCracks++;
 	    phys->isCohesive = 0;
@@ -122,7 +124,7 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	    st1->damageIndex+=1.0/st1->nbInitBonds;
 	    st2->damageIndex+=1.0/st2->nbInitBonds;
 	    
-	      if (!neverErase) return false; 
+	    if (!neverErase) return false; 
 	    else {
 	      phys->shearForce = Vector3r::Zero();
 	      phys->normalForce = Vector3r::Zero();
@@ -132,7 +134,7 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	}
 	// NormalForce
 	Real Fn = 0;
-	//ShearForce 
+	//ShearForce
 	Vector3r& shearForce = phys->shearForce;
 	
 	/* Frictional contact due to overlap*/
@@ -157,13 +159,11 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	/* Apply forces */
 	if (phys->isCohesive)
 	{
-	  phys->normalForce = (Fn*geom->normal) + (phys->beamNormalForce*geom->normal);
-	  f = phys->normalForce + shearForce + beamSForce;
+	  f = (Fn*geom->normal) + (beamNForce*geom->normal) + shearForce + beamSForce;
 	}
 	else
 	{
-	  phys->normalForce = Fn*geom->normal;
-	  f = phys->normalForce + shearForce;
+	  f = Fn*geom->normal + shearForce;
 	}
 	
 	phys->previousDisplacement = cohesive_D;
@@ -173,18 +173,25 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	scene->forces.addForce (id1,-f);
 	scene->forces.addForce (id2, f);
 	
+	Vector3r particleMoment1 = Vector3r::Zero();
+	Vector3r particleMoment2 = Vector3r::Zero();	
 	/// those lines are needed if rootBody->forces.addForce and rootBody->forces.addMoment are used instead of applyForceAtContactPoint -> NOTE need to check for accuracy!!!
-	scene->forces.addTorque(id1,(geom->radius1-0.5*geom->penetrationDepth)* geom->normal.cross(-f));
-	scene->forces.addTorque(id2,(geom->radius2-0.5*geom->penetrationDepth)* geom->normal.cross(-f));
-	
-	Vector3r totalMoment = Vector3r::Zero();
-	totalMoment = - momentBend - momentTwist;
-	
-	if (phys->isCohesive)
+	if (D > 0)
 	{
-	  scene->forces.addTorque(id1,totalMoment);
-	  scene->forces.addTorque(id2,-totalMoment);
+	  particleMoment1 = (geom->radius1-0.5*geom->penetrationDepth)* geom->normal.cross(-f);
+	  particleMoment2 = (geom->radius2-0.5*geom->penetrationDepth)* geom->normal.cross(-f);
 	}
+	//scene->forces.addTorque(id1,(geom->radius1-0.5*geom->penetrationDepth)* geom->normal.cross(-f));
+	//scene->forces.addTorque(id2,(geom->radius2-0.5*geom->penetrationDepth)* geom->normal.cross(-f));
+	
+	Vector3r totalMoment1 = Vector3r::Zero();
+	Vector3r totalMoment2 = Vector3r::Zero();
+	
+	totalMoment1 = -momentBend - momentTwist + particleMoment1;
+	totalMoment2 = momentBend + momentTwist + particleMoment2;
+	  
+	scene->forces.addTorque(id1,totalMoment1);
+	scene->forces.addTorque(id2,totalMoment2);
 	
 	return true;
 	
@@ -254,8 +261,9 @@ void Ip2_BPMMat_BPMMat_BPMPhys::go(const shared_ptr<Material>& b1, const shared_
 	  contactPhysics->beamPolarMomInertia = (1./2.)*Mathr::PI*pow(contactPhysics->beamRadius,4);
 	  contactPhysics->beamNormalStiffness = 2.*cohesiveE1*R1*cohesiveE2*R2/(cohesiveE1*R1+cohesiveE2*R2);
 	  contactPhysics->beamShearStiffness = 2.*cohesiveE1*R1*cohesiveV1*cohesiveE2*R2*cohesiveV2/(cohesiveE1*R1*cohesiveV1+cohesiveE2*R2*cohesiveV2);
-	  contactPhysics->beamNormalCohesion = 2.*norCoh1*R1*norCoh2*R2/(norCoh1*R1+norCoh2*R2);
-	  contactPhysics->beamShearCohesion = 2.*sheCoh1*R1*sheCoh2*R2/(sheCoh1*R1+sheCoh2*R2);
+	  contactPhysics->beamNormalCohesion = std::min(norCoh1,norCoh2);
+	  contactPhysics->beamShearCohesion = std::min(sheCoh1,sheCoh2);
+	  contactPhysics->beamSCoh = contactPhysics->beamShearCohesion;
 	  contactPhysics->beamBeta = (beta1 + beta2)/2.;
 	}
 	
