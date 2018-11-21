@@ -156,30 +156,41 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	}
 	
 	Vector3r f = Vector3r::Zero();
+	Vector3r beamF = Vector3r::Zero();
+	Vector3r totalF = Vector3r::Zero();
 	/* Apply forces */
+	f = (Fn*geom->normal) + shearForce;
 	if (phys->isCohesive)
 	{
-	  f = (Fn*geom->normal) + (beamNForce*geom->normal) + shearForce + beamSForce;
+	  beamF = (beamNForce*geom->normal) + beamSForce;
 	}
-	else
-	{
-	  f = Fn*geom->normal + shearForce;
-	}
+	
+	totalF = f + beamF;
 	
 	phys->previousDisplacement = cohesive_D;
 	  
 	/// applyForceAtContactPoint computes torque also and, for now, we don't want rotation for particles on joint (some errors in calculation due to specific geometry) 
  	//applyForceAtContactPoint(f, geom->contactPoint, I->getId2(), b2->state->pos, I->getId1(), b1->state->pos, scene);
-	scene->forces.addForce (id1,-f);
-	scene->forces.addForce (id2, f);
+	scene->forces.addForce (id1,-totalF);
+	scene->forces.addForce (id2, totalF);
 	
 	Vector3r particleMoment1 = Vector3r::Zero();
-	Vector3r particleMoment2 = Vector3r::Zero();	
-	/// those lines are needed if rootBody->forces.addForce and rootBody->forces.addMoment are used instead of applyForceAtContactPoint -> NOTE need to check for accuracy!!!
+	Vector3r particleMoment2 = Vector3r::Zero();
+	Vector3r beamMoment1 = Vector3r::Zero();
+	Vector3r beamMoment2 = Vector3r::Zero();
+	
+	/// moment from overlap forces
 	if (D > 0)
 	{
 	  particleMoment1 = (geom->radius1-0.5*geom->penetrationDepth)* geom->normal.cross(-f);
 	  particleMoment2 = (geom->radius2-0.5*geom->penetrationDepth)* geom->normal.cross(-f);
+	}
+	
+	// moment from beam forces
+	if (phys->isCohesive)
+	{
+	  beamMoment1 = (geom->radius1-0.5*geom->penetrationDepth)* geom->normal.cross(-beamF);
+	  beamMoment2 = (geom->radius2-0.5*geom->penetrationDepth)* geom->normal.cross(-beamF);
 	}
 	//scene->forces.addTorque(id1,(geom->radius1-0.5*geom->penetrationDepth)* geom->normal.cross(-f));
 	//scene->forces.addTorque(id2,(geom->radius2-0.5*geom->penetrationDepth)* geom->normal.cross(-f));
@@ -187,8 +198,8 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	Vector3r totalMoment1 = Vector3r::Zero();
 	Vector3r totalMoment2 = Vector3r::Zero();
 	
-	totalMoment1 = -momentBend - momentTwist + particleMoment1;
-	totalMoment2 = momentBend + momentTwist + particleMoment2;
+	totalMoment1 = -momentBend - momentTwist + particleMoment1 + beamMoment1;
+	totalMoment2 = momentBend + momentTwist + particleMoment2 + beamMoment2;
 	  
 	scene->forces.addTorque(id1,totalMoment1);
 	scene->forces.addTorque(id2,totalMoment2);
