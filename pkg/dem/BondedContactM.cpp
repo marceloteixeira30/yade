@@ -35,6 +35,29 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	D = geom->penetrationDepth;
 	Real cohesive_D = geom->penetrationDepth - (geom->radius1 + geom->radius2 + phys->initD);
 	
+	// NormalForce due to overlap
+	Real Fn = 0;
+	//ShearForce due to overlap
+	Vector3r& shearForce = phys->shearForce;
+	const Vector3r& incrementalShear = geom->shearIncrement();
+	
+	// Frictional contact due to overlap
+	if (D > 0.0)
+	{
+	  Fn = phys->kn*D;
+	  shearForce = geom->rotate(phys->shearForce);
+	  shearForce -= phys->ks*incrementalShear;
+	  /* Mohr-Coulomb criterion*/
+	  Real maxFs = Fn*phys->tanResidualFrictionAngle;
+	  Real scalarShearForce = shearForce.norm();
+	  if (fabs(scalarShearForce) > fabs(maxFs)) {
+	    if (scalarShearForce != 0)
+	      shearForce*=maxFs/scalarShearForce;
+	    else
+	      shearForce=Vector3r::Zero();
+	  }
+	}
+	
 	// Cohesive variables declaration
 	Real& beamNForce = phys->beamNormalForce;
 	Vector3r& beamSForce = phys->beamShearForce;
@@ -52,7 +75,6 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  
 	  /* Shear force from the beam */
 	  beamSForce = geom->rotate(phys->beamShearForce);
-	  const Vector3r& incrementalShear = geom->shearIncrement();
 	  beamSForce -= phys->beamShearStiffness * phys->beamArea * incrementalShear;
 	  
 	  /* Moments from the beam */
@@ -65,15 +87,15 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	  Vector3r relAngVelBend = relAngVel - geom->normal.dot(relAngVel)*geom->normal; // keep only the bending part
 	  Vector3r relRotBend = relAngVelBend*dt; // relative rotation due to rolling behaviour	
 	  // incremental formulation for the bending moment (as for the shear part)
-	  momentBend = geom->rotate(momentBend); // rotate moment vector (updated)
-	  momentBend = momentBend-phys->beamNormalStiffness*phys->beamMomInertia*relRotBend;
+	  momentBend = geom->rotate(momentBend);
+	  momentBend -= phys->beamNormalStiffness*phys->beamMomInertia*relRotBend;
 	  
 	  /* Torsion */
 	  Vector3r relAngVelTwist = geom->normal.dot(relAngVel)*geom->normal;
-	  Vector3r relRotTwist = relAngVelTwist*dt; // component of relative rotation along n  FIXME: sign?
+	  Vector3r relRotTwist = relAngVelTwist*dt;
 	  // incremental formulation for the torsional moment
-	  momentTwist = geom->rotate(momentTwist); // rotate moment vector (updated)
-	  momentTwist = momentTwist-phys->beamShearStiffness*phys->beamPolarMomInertia*relRotTwist; // FIXME: sign?
+	  momentTwist = geom->rotate(momentTwist);
+	  momentTwist -= phys->beamShearStiffness*phys->beamPolarMomInertia*relRotTwist;
 	  
 	  /* Limits for the moments and forces */
 	  Real sign = (cohesive_D > 0.0) ? 1.0 : ((cohesive_D < 0.0) ? -1.0 : 0.0);
@@ -97,7 +119,7 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	    st1->nbBrokenBonds++;
 	    st2->nbBrokenBonds++;
 	    st1->damageIndex+=1.0/st1->nbInitBonds;
-	    st2->damageIndex+=1.0/st2->nbInitBonds;    
+	    st2->damageIndex+=1.0/st2->nbInitBonds;
 	    
 	    if ( D < 0 ) { // spheres do not touch
                 if (!neverErase) return false;
@@ -130,28 +152,6 @@ bool Law2_ScGeom_BPMPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<IP
 	      phys->normalForce = Vector3r::Zero();
 	      return true;
 	    }
-	  }
-	}
-	// NormalForce
-	Real Fn = 0;
-	//ShearForce
-	Vector3r& shearForce = phys->shearForce;
-	
-	/* Frictional contact due to overlap*/
-	if (D > 0.0)
-	{
-	  Fn = phys->kn*D;
-	  shearForce = geom->rotate(phys->shearForce);
-	  const Vector3r& incrementalShear = geom->shearIncrement();
-	  shearForce -= phys->ks*incrementalShear;
-	  /* Mohr-Coulomb criterion*/
-	  Real maxFs = Fn*phys->tanResidualFrictionAngle;
-	  Real scalarShearForce = shearForce.norm();
-	  if (scalarShearForce > maxFs) {
-	    if (scalarShearForce != 0)
-	      shearForce*=maxFs/scalarShearForce;
-	    else
-	      shearForce=Vector3r::Zero();
 	  }
 	}
 	
