@@ -49,7 +49,7 @@ class BPMpmPhys: public NormShearPhys {
 
 		YADE_CLASS_BASE_DOC_ATTRS_CTOR_PY(BPMpmPhys,NormShearPhys,"Representation of a single interaction of the JCFpm type, storage for relevant parameters",
 			((Real,initD,0.,,"equilibrium distance for interacting particles. Computed as the interparticular distance at first contact detection."))
-			((Real,beamNormalForce,0.,,"save the normal force for next step increment.[N]"))
+			((Vector3r,beamNormalForce,Vector3r::Zero(),,"save the normal force for next step increment.[N]"))
 			((Vector3r,beamShearForce,Vector3r::Zero(),,"save the shear force for next step increment.[N]"))
 			((Real,beamNormalStiffness,0.,,"normal stiffness for the beam (cohesion between particles).[Pa]"))
 			((Real,beamShearStiffness,0.,,"shear stiffness for the beam (cohesion between particles).[Pa]"))

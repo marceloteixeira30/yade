@@ -52,7 +52,7 @@ bool Law2_ScGeom_BPMpmPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<
 	const Vector3r& incrementalShear = geom->shearIncrement();
 	
 	// Cohesive variables declaration
-	Real& beamNForce = phys->beamNormalForce;
+	Vector3r& beamNForce = phys->beamNormalForce;
 	Vector3r& beamSForce = phys->beamShearForce;
 	Vector3r& momentBend = phys->beamMomentBending;
 	Vector3r& momentTwist = phys->beamMomentTwist;
@@ -62,7 +62,8 @@ bool Law2_ScGeom_BPMpmPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<
 	if ( phys->isCohesive ) {
 	  /* Normal force from the beam */
 	  Real beamIncFn = phys->beamNormalStiffness * phys->beamArea * (cohesive_D-phys->previousDisplacement);
-	  beamNForce = beamNForce + beamIncFn;  
+	  Vector3r beamIncForce = beamIncFn * geom->normal;
+	  beamNForce = beamNForce + beamIncForce;
 	  
 	  /* Shear force from the beam */
 	  beamSForce = geom->rotate(phys->beamShearForce);
@@ -90,12 +91,12 @@ bool Law2_ScGeom_BPMpmPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<
 	  
 	  /* Limits for the moments and forces */
 	  Real sign = (cohesive_D > 0.0) ? 1.0 : ((cohesive_D < 0.0) ? -1.0 : 0.0);
-	  normalStress = -((sign * beamNForce) / phys->beamArea) + (phys->beamBeta * (momentBend.norm() * phys->beamRadius) / phys->beamMomInertia);
+	  normalStress = -((sign * beamNForce.norm()) / phys->beamArea) + (phys->beamBeta * (momentBend.norm() * phys->beamRadius) / phys->beamMomInertia);
 	  shearStress = (beamSForce.norm() / phys->beamArea) + (phys->beamBeta * (momentTwist.norm() * phys->beamRadius) / phys->beamPolarMomInertia);
 	  
 	  /* Update shear resistance */
 	  Real& beamSCoh = phys->beamSCoh;
-	  beamSCoh = (phys->beamShearCohesion + (sign * beamNForce / phys->beamArea) * phys->tanFrictionAngle);
+	  beamSCoh = (phys->beamShearCohesion + (sign * beamNForce.norm() / phys->beamArea) * phys->tanFrictionAngle);
 	  
 	  if (fabs(shearStress) > fabs(beamSCoh))
 	  {
@@ -170,9 +171,8 @@ bool Law2_ScGeom_BPMpmPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<
 	
 	/* Apply forces */
 	phys->normalForce = Fn*geom->normal;
-	Vector3r beamNF = beamNForce*geom->normal;
 	
-	Vector3r f = phys->normalForce + beamNF + shearForce + beamSForce;
+	Vector3r f = phys->normalForce + beamNForce + shearForce + beamSForce;
 	
 	/// applyForceAtContactPoint computes torque also and, for now, we don't want rotation for particles on joint (some errors in calculation due to specific geometry) 
  	//applyForceAtContactPoint(f, geom->contactPoint, I->getId2(), b2->state->pos, I->getId1(), b1->state->pos, scene);
