@@ -147,11 +147,11 @@ bool Law2_ScGeom_BPMpmPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<
 	  }
 	}
 	
-	Real Fn = 0;
-	if (D > 0 && cohesive_D > 0)
+	Real Fn = 0.;
+	if (D > 0.)
 	{
-	  /* NormalForce */
-	  Fn = phys->kn*cohesive_D; 
+	  // Normal force
+	  Fn = phys->kn*D;
         
 	  /* ShearForce */
 	  shearForce = geom->rotate(phys->shearForce);
