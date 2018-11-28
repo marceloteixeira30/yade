@@ -251,8 +251,8 @@ void Ip2_BPMpmMat_BPMpmMat_BPMpmPhys::go(const shared_ptr<Material>& b1, const s
 	}
 	
 	if ( contactPhysics->isCohesive ) {
-	  contactPhysics->beamRadius = min(lambda1,lambda2)*pow(min(R1,R2),2);
-	  contactPhysics->beamArea = Mathr::PI*contactPhysics->beamRadius;
+	  contactPhysics->beamRadius = min(lambda1,lambda2)*min(R1,R2);
+	  contactPhysics->beamArea = Mathr::PI*pow(contactPhysics->beamRadius,2);
 	  contactPhysics->beamMomInertia = (1./4.)*Mathr::PI*pow(contactPhysics->beamRadius,4);
 	  contactPhysics->beamPolarMomInertia = (1./2.)*Mathr::PI*pow(contactPhysics->beamRadius,4);
 	  contactPhysics->beamNormalStiffness = 2.*cohesiveE1*R1*cohesiveE2*R2/(cohesiveE1*R1+cohesiveE2*R2);
