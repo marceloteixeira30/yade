@@ -113,6 +113,13 @@ bool Law2_ScGeom_BPMpmPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<
 	    st1->damageIndex+=1.0/st1->nbInitBonds;
 	    st2->damageIndex+=1.0/st2->nbInitBonds;
 	    
+	    phys->beamSCoh = 0.0;
+	    phys->beamNormalCohesion = 0.0;
+	    phys->beamNormalForce = Vector3r::Zero();
+	    phys->beamShearForce = Vector3r::Zero();
+	    momentBend = Vector3r::Zero();
+	    momentTwist = Vector3r::Zero();
+	    
 	    if ( D < 0 ) { // spheres do not touch
                 if (!neverErase) return false;
                 else {
@@ -138,7 +145,14 @@ bool Law2_ScGeom_BPMpmPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<
 	    st1->damageIndex+=1.0/st1->nbInitBonds;
 	    st2->damageIndex+=1.0/st2->nbInitBonds;
 	    
-	    if (!neverErase) return false; 
+	    phys->beamSCoh = 0.0;
+	    phys->beamNormalCohesion = 0.0;
+	    phys->beamNormalForce = Vector3r::Zero();
+	    phys->beamShearForce = Vector3r::Zero();
+	    momentBend = Vector3r::Zero();
+	    momentTwist = Vector3r::Zero();
+	    
+	    if (!neverErase && D < 0.0) return false; 
 	    else {
 	      phys->shearForce = Vector3r::Zero();
 	      phys->normalForce = Vector3r::Zero();
