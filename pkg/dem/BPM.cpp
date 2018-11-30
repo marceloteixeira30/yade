@@ -152,11 +152,15 @@ bool Law2_ScGeom_BPMpmPhys_BondedContactM::go(shared_ptr<IGeom>& ig, shared_ptr<
 	    momentBend = Vector3r::Zero();
 	    momentTwist = Vector3r::Zero();
 	    
-	    if (!neverErase && D < 0.0) return false; 
-	    else {
-	      phys->shearForce = Vector3r::Zero();
-	      phys->normalForce = Vector3r::Zero();
-	      return true;
+	    if (D < 0.0)
+	    {
+	      if (!neverErase)
+		return false; 
+	      else {
+		phys->shearForce = Vector3r::Zero();
+		phys->normalForce = Vector3r::Zero();
+		return true;
+	      }
 	    }
 	  }
 	}
