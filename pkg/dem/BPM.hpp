@@ -31,7 +31,7 @@ class BPMpmMat: public FrictMat {
 		((Real,normalCohesion,0.,,"Defines the maximum admissible normal stress in traction in the matrix. [Pa]"))
 		((Real,shearCohesion,0.,,"Defines the maximum admissible tangential stress in the matrix. [Pa]"))
 		((Real,cohesiveYoung,0.,,"Defines the Young's modulus of the cohesive contact. [Pa]"))
-		((Real,cohesivePoisson,0.,,"Defines the Poisson coefficient of the cohesive contact. [-]"))
+		((Real,cohesivePoisson,0.,,"Defines the Poisson coefficient of the cohesive contact (kn/ks). [-]"))
 		((Real,lambdaCohesion,0.,,"Parameter defining the radius of the cohesive contact. [-]"))
 		((Real,betaCohesion,0.,,"Parameter to define the influence of the moments on the calculated maximum stress. [-]"))
                 ((Real,residualFrictionAngle,-1.,,"Defines the residual friction angle (when contacts are not cohesive). residualFrictionAngle=frictionAngle if not specified. [degrees]"))

@@ -257,8 +257,12 @@ void Ip2_BPMpmMat_BPMpmMat_BPMpmPhys::go(const shared_ptr<Material>& b1, const s
 	/* Pass values to JCFpmPhys. In case of a "jointed" interaction, the following values will be replaced by other ones later (in few if(){} blocks)*/
 	
 	// elastic properties
-	contactPhysics->kn = 2.*E1*R1*E2*R2/(E1*R1+E2*R2);
-        ( (v1==0)&&(v2==0) )? contactPhysics->ks=0 : contactPhysics->ks = 2.*E1*R1*v1*E2*R2*v2/(E1*R1*v1+E2*R2*v2);
+	Real kn1 = E1 * 4.0 * R1;
+	Real kn2 = E2 * 4.0 * R2;
+	Real ks1 = kn1 / v1;
+	Real ks2 = kn2 / v2;
+	contactPhysics->kn = 2.0*kn1*kn2/(kn1+kn2);
+        ( (v1==0)&&(v2==0) )? contactPhysics->ks=0 : contactPhysics->ks = 2.0*ks1*ks2/(ks1+ks2);
 	
 	// cohesive properties
 	///to set if the contact is cohesive or not
@@ -273,8 +277,13 @@ void Ip2_BPMpmMat_BPMpmMat_BPMpmPhys::go(const shared_ptr<Material>& b1, const s
 	  contactPhysics->beamArea = Mathr::PI*pow(contactPhysics->beamRadius,2);
 	  contactPhysics->beamMomInertia = (1./4.)*Mathr::PI*pow(contactPhysics->beamRadius,4);
 	  contactPhysics->beamPolarMomInertia = (1./2.)*Mathr::PI*pow(contactPhysics->beamRadius,4);
-	  contactPhysics->beamNormalStiffness = 2.*cohesiveE1*R1*cohesiveE2*R2/(cohesiveE1*R1+cohesiveE2*R2);
-	  contactPhysics->beamShearStiffness = 2.*cohesiveE1*R1*cohesiveV1*cohesiveE2*R2*cohesiveV2/(cohesiveE1*R1*cohesiveV1+cohesiveE2*R2*cohesiveV2);
+	  
+	  Real cohesivekn1 = cohesiveE1 / (2.0*R1);
+	  Real cohesivekn2 = cohesiveE2 / (2.0*R2);
+	  Real cohesiveks1 = cohesivekn1 / cohesiveV1;
+	  Real cohesiveks2 = cohesivekn2 / cohesiveV2;
+	  contactPhysics->beamNormalStiffness = 2.0*cohesivekn1*cohesivekn2/(cohesivekn1+cohesivekn2);
+	  contactPhysics->beamShearStiffness = 2.0*cohesiveks1*cohesiveks2/(cohesiveks1+cohesiveks2);
 	  contactPhysics->beamNormalCohesion = std::min(norCoh1,norCoh2);
 	  contactPhysics->beamShearCohesion = std::min(sheCoh1,sheCoh2);
 	  contactPhysics->beamSCoh = contactPhysics->beamShearCohesion;
